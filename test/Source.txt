@@ -1,0 +1,32 @@
+#include <windows.h>
+#include "headers/PE/EatHook.hpp"
+#include "headers/Tests/TestEffectTracker.hpp"
+
+EffectTracker eatEffectTracker;
+
+typedef  int(__stdcall* tEatMessageBox)(HWND    hWnd,
+	LPCTSTR lpText,
+	LPCTSTR lpCaption,
+	UINT    uType);
+tEatMessageBox  oEatMessageBox;
+
+int __stdcall hkEatMessageBox(HWND    hWnd,
+	LPCTSTR lpText,
+	LPCTSTR lpCaption,
+	UINT    uType)
+{
+	MessageBox(0, "My Hook", "text", 0);
+	eatEffectTracker.PeakEffect().trigger();
+	return 1;
+}
+
+void main()
+{
+	PLH::EatHook hook("MessageBoxA", L"User32.dll", (char*)&hkEatMessageBox, (uint64_t*)&oEatMessageBox);
+	hook.hook();
+
+	eatEffectTracker.PushEffect();
+	MessageBoxA(0, "test", "test", 0);
+	eatEffectTracker.PopEffect().didExecute();
+	hook.unHook();
+}
